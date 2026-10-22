@@ -1,27 +1,76 @@
-/*
- * Copyright (c) 2024 Your Name
- * SPDX-License-Identifier: Apache-2.0
- */
-
 `default_nettype none
 
-module tt_um_example (
-    input  wire [7:0] ui_in,    // Dedicated inputs
-    output wire [7:0] uo_out,   // Dedicated outputs
-    input  wire [7:0] uio_in,   // IOs: Input path
-    output wire [7:0] uio_out,  // IOs: Output path
-    output wire [7:0] uio_oe,   // IOs: Enable path (active high: 0=input, 1=output)
-    input  wire       ena,      // always 1 when the design is powered, so you can ignore it
-    input  wire       clk,      // clock
-    input  wire       rst_n     // reset_n - low to reset
+module tt_um_ayush_2048 (
+	input wire [7:0] ui_in,
+	output wire [7:0] uo_out,
+	input wire [7:0] uio_in,
+	output wire [7:0] uio_out,
+	output wire [7:0] uio_oe,
+	input wire ena,
+	input wire clk,
+	input wire rst_n
 );
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+wire [9:0] hpos;
+wire [9:0] vpos;
+wire hsync;
+wire vsync;
+wire display_on;
+wire [5:0] rgb;
+wire [63:0] board;
+wire [4:0] btn_press;
+reg [7:0] vga_out;
 
-  // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+// one clock pulse as the beam enters vertical blanking
+wire frame_tick = (hpos == 10'd0) && (vpos == 10'd480);
+
+vga_sync u_vga_sync (
+	.clk(clk),
+	.rst_n(rst_n),
+	.hpos(hpos),
+	.vpos(vpos),
+	.hsync(hsync),
+	.vsync(vsync),
+	.display_on(display_on)
+);
+
+button_input u_button_input (
+	.clk(clk),
+	.rst_n(rst_n),
+	.frame_tick(frame_tick),
+	.btn_raw(ui_in[4:0]),
+	.btn_press(btn_press)
+);
+
+game_2048 u_game_2048 (
+	.clk(clk),
+	.rst_n(rst_n),
+	.btn_press(btn_press),
+	.board(board)
+);
+
+board_draw u_board_draw (
+	.hpos(hpos),
+	.vpos(vpos),
+	.display_on(display_on),
+	.board(board),
+	.rgb(rgb)
+);
+
+// register colour and sync together so they leave the chip on the same edge
+always @(posedge clk) begin
+	if(!rst_n) begin
+		vga_out <= 8'b1000_1000;
+	end
+	else begin
+		vga_out <= {hsync, rgb[0], rgb[2], rgb[4], vsync, rgb[1], rgb[3], rgb[5]};
+	end
+end
+
+assign uo_out = vga_out;
+assign uio_out = 8'd0;
+assign uio_oe = 8'd0;
+
+wire _unused = &{ena, ui_in[7:5], uio_in, 1'b0};
 
 endmodule
