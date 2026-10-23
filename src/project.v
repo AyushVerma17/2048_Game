@@ -30,8 +30,7 @@ vga_sync u_vga_sync (
 	.hpos(hpos),
 	.vpos(vpos),
 	.hsync(hsync),
-	.vsync(vsync),
-	.display_on(display_on)
+	.vsync(vsync)
 );
 
 button_input u_button_input (
@@ -52,7 +51,6 @@ game_2048 u_game_2048 (
 board_draw u_board_draw (
 	.hpos(hpos),
 	.vpos(vpos),
-	.display_on(display_on),
 	.board(board),
 	.rgb(rgb)
 );
