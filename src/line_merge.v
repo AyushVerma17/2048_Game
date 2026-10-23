@@ -8,7 +8,7 @@ module line_merge (
 	output reg [15:0] line_out
 );
 
-reg [1:0] i;
+integer i;
 reg [3:0] cur_tile;
 reg [3:0] pending;
 reg [1:0] write_pos;
