@@ -7,38 +7,29 @@ module button_input (
 	input wire rst_n,
 	input wire frame_tick,
 	input wire [4:0] btn_raw,
-	output reg [4:0] btn_press
+	output wire [4:0] btn_press
 );
 
 reg [4:0] btn_meta;
 reg [4:0] btn_sync;
 reg [4:0] btn_sample;
 
-// buttons have nothing to do with our clock, so double flop them first
+// synchronizer flops just follow the pins, so they need no reset
 always @(posedge clk) begin
-	if(!rst_n) begin
-		btn_meta <= 5'd0;
-		btn_sync <= 5'd0;
-	end
-	else begin
-		btn_meta <= btn_raw;
-		btn_sync <= btn_meta;
-	end
+	btn_meta <= btn_raw;
+	btn_sync <= btn_meta;
 end
 
-// pulse only when a button is high now but was low at the previous frame
 always @(posedge clk) begin
 	if(!rst_n) begin
 		btn_sample <= 5'd0;
-		btn_press <= 5'd0;
 	end
 	else if(frame_tick) begin
-		btn_press <= btn_sync & ~btn_sample;
 		btn_sample <= btn_sync;
 	end
-	else begin
-		btn_press <= 5'd0;
-	end
 end
+
+// high for the frame_tick clock only, when a button went from released to pressed
+assign btn_press = frame_tick ? (btn_sync & ~btn_sample) : 5'd0;
 
 endmodule
