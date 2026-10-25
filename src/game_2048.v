@@ -9,13 +9,16 @@ module game_2048 (
 	input wire clk,
 	input wire rst_n,
 	input wire [4:0] btn_press,
-	output reg [63:0] board
+	output reg [63:0] board,
+	output reg game_won,
+	output reg game_over
 );
 
 // btn_press bits: 0 up, 1 down, 2 left, 3 right, 4 new game
 localparam IDLE = 2'd0;
 localparam MOVE = 2'd1;
 localparam SPAWN = 2'd2;
+localparam CHECK = 2'd3;
 
 // dir[1] = 1 moves columns (up, down), dir[0] = 1 slides towards the far side (right, down)
 localparam DIR_LEFT = 2'b00;
@@ -29,6 +32,7 @@ reg [4:0] step_cnt;
 reg moved;
 reg placed;
 reg second_tile;
+reg can_move;
 reg [3:0] spawn_start;
 reg [6:0] lfsr;
 
@@ -55,9 +59,16 @@ wire [63:0] cols_shifted = {line_done[15:12], board[63:52], line_done[11:8], boa
 
 // spawning moves the board one tile per clock, so tile 0 is the one being checked
 // first lap only looks from spawn_start onwards, second lap looks everywhere
-wire spawn_here = !placed && (board[3:0] == 4'd0) && (step_cnt[4] || (step_cnt[3:0] >= spawn_start));
+wire spawn_here = (state == SPAWN) && !placed && (board[3:0] == 4'd0) && (step_cnt[4] || (step_cnt[3:0] >= spawn_start));
 wire [3:0] new_tile = (lfsr[6:4] == 3'd0) ? 4'd2 : 4'd1;
 wire [63:0] tiles_shifted = {(spawn_here ? new_tile : board[3:0]), board[63:4]};
+
+// CHECK turns the board one more lap past tile 0. After step_cnt shifts, tile 0 holds
+// original tile step_cnt, tile 1 its right neighbour and tile 4 the one below it.
+// The last column has no right neighbour and the bottom row has nothing below.
+wire pair_right = (step_cnt[1:0] != 2'd3) && (board[3:0] == board[7:4]);
+wire pair_below = (step_cnt[3:2] != 2'd3) && (board[3:0] == board[19:16]);
+wire tile_can_move = (board[3:0] == 4'd0) || pair_right || pair_below;
 
 // 7 bit LFSR, x^7 + x^6 + 1, repeats every 127 clocks
 always @(posedge clk) begin
@@ -79,6 +90,9 @@ always @(posedge clk) begin
 		placed <= 1'b0;
 		second_tile <= 1'b0;
 		spawn_start <= 4'd0;
+		can_move <= 1'b0;
+		game_won <= 1'b0;
+		game_over <= 1'b0;
 	end
 	else begin
 		case(state)
@@ -86,11 +100,13 @@ always @(posedge clk) begin
 				step_cnt <= 5'd0;
 				moved <= 1'b0;
 				placed <= 1'b0;
+				can_move <= 1'b0;
 				spawn_start <= lfsr[3:0];
 				if(btn_press[4]) begin
 					// new game: empty the board and drop two tiles
 					board <= 64'd0;
 					second_tile <= 1'b1;
+					game_won <= 1'b0;
 					state <= SPAWN;
 				end
 				else if(btn_press[0]) begin
@@ -142,13 +158,28 @@ always @(posedge clk) begin
 					second_tile <= 1'b0;
 					spawn_start <= lfsr[3:0];
 					if(!second_tile) begin
-						state <= IDLE;
+						state <= CHECK;
 					end
 				end
 			end
 
-			default: begin
-				state <= IDLE;
+			CHECK: begin
+				// outside SPAWN no tile is placed, so this just turns the board one tile
+				board <= tiles_shifted;
+				if(tile_can_move) begin
+					can_move <= 1'b1;
+				end
+				// 11 is the 2048 tile, higher values only appear if you keep playing
+				if(board[3:0] >= 4'd11) begin
+					game_won <= 1'b1;
+				end
+				step_cnt <= step_cnt + 5'd1;
+				if(step_cnt == 5'd15) begin
+					// a full lap later the board is back in place
+					step_cnt <= 5'd0;
+					game_over <= !(can_move || tile_can_move);
+					state <= IDLE;
+				end
 			end
 		endcase
 	end

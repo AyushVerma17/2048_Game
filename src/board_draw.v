@@ -4,16 +4,17 @@
 module board_draw #(
 	// Board Top Left coordinates on the screen
 	parameter BOARD_START_X = 10'd192,
-	parameter BOARD_END_X = BOARD_START_X + 10'd256,
-	parameter BOARD_START_Y = 10'd112,
-	parameter BOARD_END_Y = BOARD_START_Y + 10'd256
+	parameter BOARD_START_Y = 10'd112
 )(
 	// Input signals coming from vga_sync.v
 	input wire [9:0] hpos,
 	input wire [9:0] vpos,
+	input wire display_on,
 	
-	// Input signal coming from game_2048.v
+	// Input signals coming from game_2048.v
 	input wire [63:0] board,
+	input wire game_won,
+	input wire game_over,
 	
 	// Output
 	output reg [5:0] rgb
@@ -24,8 +25,9 @@ module board_draw #(
 wire [9:0] board_x = hpos - BOARD_START_X;
 wire [9:0] board_y = vpos - BOARD_START_Y;
 
-// To assign the RGB value we need to check first if the horizontal and vertical pointers are inside the Board coordinates
-wire inside_board = (hpos >= BOARD_START_X) && (hpos < BOARD_END_X) && (vpos >= BOARD_START_Y) && (vpos < BOARD_END_Y);
+// Left of or above the board the subtraction wraps round to a big number,
+// so the top two bits are both 0 only inside the 256 x 256 board
+wire inside_board = (board_x[9:8] == 2'b00) && (board_y[9:8] == 2'b00);
 
 // bits [7:6] pick the tile, bits [5:0] are the position inside it
 wire [3:0] tile_index = {board_y[7:6], board_x[7:6]};
@@ -53,7 +55,15 @@ always @(*) begin
 			4'd9: rgb = 6'b01_11_00; // 512
 			4'd10: rgb = 6'b10_11_00; // 1024
 			4'd11: rgb = 6'b11_11_00; // 2048
+			4'd12, 4'd13, 4'd14, 4'd15: rgb = 6'b11_11_11; // 4096 and above
 		endcase
+	end
+	// Outside the board the screen is black, red when stuck, green after a win
+	else if(display_on && game_over) begin
+		rgb = 6'b10_00_00;
+	end
+	else if(display_on && game_won) begin
+		rgb = 6'b00_10_00;
 	end
 end
 

@@ -19,6 +19,8 @@ wire display_on;
 wire [5:0] rgb;
 wire [63:0] board;
 wire [4:0] btn_press;
+wire game_won;
+wire game_over;
 reg [7:0] vga_out;
 
 // one clock pulse as the beam enters vertical blanking
@@ -30,7 +32,8 @@ vga_sync u_vga_sync (
 	.hpos(hpos),
 	.vpos(vpos),
 	.hsync(hsync),
-	.vsync(vsync)
+	.vsync(vsync),
+	.display_on(display_on)
 );
 
 button_input u_button_input (
@@ -45,13 +48,18 @@ game_2048 u_game_2048 (
 	.clk(clk),
 	.rst_n(rst_n),
 	.btn_press(btn_press),
-	.board(board)
+	.board(board),
+	.game_won(game_won),
+	.game_over(game_over)
 );
 
 board_draw u_board_draw (
 	.hpos(hpos),
 	.vpos(vpos),
+	.display_on(display_on),
 	.board(board),
+	.game_won(game_won),
+	.game_over(game_over),
 	.rgb(rgb)
 );
 
