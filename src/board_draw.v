@@ -38,6 +38,16 @@ wire [3:0] tile_value = board[tile_index*4 +: 4];
 // center white square to better visualize the empty tiles
 wire center = (board_x[5:0] > 6'd30) && (board_x[5:0] < 6'd33) && (board_y[5:0] > 6'd30) && (board_y[5:0] < 6'd33);
 
+// the number of the tile, drawn on top of its colour
+wire digit_pixel;
+
+tile_digits u_tile_digits (
+	.tile_value(tile_value),
+	.pos_x(board_x[5:1]),
+	.pos_y(board_y[5:1]),
+	.digit_pixel(digit_pixel)
+);
+
 // Whatever is the current tile value we will glow the RGB according to that
 always @(*) begin
 	rgb = 6'b00_00_00;
@@ -57,6 +67,10 @@ always @(*) begin
 			4'd11: rgb = 6'b11_11_00; // 2048
 			4'd12, 4'd13, 4'd14, 4'd15: rgb = 6'b11_11_11; // 4096 and above
 		endcase
+		// white text on the two dark tiles (32 and 64), black on all the others
+		if(digit_pixel) begin
+			rgb = ((tile_value == 4'd5) || (tile_value == 4'd6)) ? 6'b11_11_11 : 6'b00_00_00;
+		end
 	end
 	// Outside the board the screen is black, red when stuck, green after a win
 	else if(display_on && game_over) begin
