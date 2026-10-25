@@ -4,7 +4,7 @@ project:
   title:        "2048 Game"      # Project title
   author:       "Ayush Verma"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  "It replicates the 2048 game"      # One line description of what your project does
+  description:  "It displays 2048 game"      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     25175000       # Clock frequency in Hz (or 0 if not applicable)
 
@@ -17,20 +17,21 @@ project:
   # List your project's source files here. Source files must be in ./src and you must list each source file separately, one per line:
   source_files:
     - "project.v"
-    - "button_input.v"
-    - "line_merge.v"
-    - "game_2048.v"
     - "board_draw.v"
+    - "button_input.v"
+    - "game_2048.v"
+    - "line_merge.v"
     - "vga_sync.v"
+    - "tile_digits.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
-  ui[0]: "up"
-  ui[1]: "down"
-  ui[2]: "left"
-  ui[3]: "right"
-  ui[4]: "new game"
+  ui[0]: ""
+  ui[1]: ""
+  ui[2]: ""
+  ui[3]: ""
+  ui[4]: ""
   ui[5]: ""
   ui[6]: ""
   ui[7]: ""
