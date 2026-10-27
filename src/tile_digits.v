@@ -111,7 +111,7 @@ always @(*) begin
 		2'd3: font_bit = 1'b0;
 	endcase
 end
-
+// code accha hai 
 assign digit_pixel = in_text && font_bit;
 
 endmodule
